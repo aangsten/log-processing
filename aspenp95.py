@@ -1,0 +1,87 @@
+
+from collections import defaultdict
+import re
+import numpy as np
+import argparse
+import pandas as pd
+
+response_pattern = re.compile( '^\\d\\d\\d\\d-\\d\\d-\\d\\d.*\t(?P<duration>\\d+)ms\t\S*\t\\d\\d\\d\t(GET|POST|HEAD|DELETE|PATCH)\t(?P<request>[^?\t]+)')
+#                                                                                                                                             ^- url up until ?
+#                                                                                                    ^- HTTP method
+#                                                                                           ^- response code
+#                                                                ^- capture 'duration' amount
+#                                ^- timestamp at beginning of line
+
+sessionid_pattern = re.compile( 'jsessionid=[^.]*')
+oid_pattern = re.compile( '\\b[a-zA-Z]{3}[a-zA-Z$0-9]{11}\\b')
+
+def get_durations(filename : str):
+    durations_raw = []
+    with open(filename, 'r') as file:
+        for line in file:
+            match = response_pattern.match(line)
+            if match:
+                durations_raw.append(int(match.group('duration')))
+
+    return np.array(durations_raw)
+
+def get_split_durations(filename : str, split : bool) -> dict:
+    durations_raw = defaultdict(list)
+    with open(filename, 'r') as file:
+        for line in file:
+            match = response_pattern.match(line)
+            if match:
+                duration = int(match.group('duration'))
+                request = re.sub( sessionid_pattern, 'jsessionid', match.group('request'))
+                request = re.sub( oid_pattern, '*OID*', request)
+                durations_raw['all'].append(duration)
+                if split :
+                    durations_raw[request].append(duration)
+
+    return {k: np.array(v) for k, v in durations_raw.items()}
+
+def print_percentile(durations : dict, name : str, level : int):
+    value = percentile(durations, level)
+    print( f'p{level}: {value: 6,}ms {name}')
+
+def print_percentiles(durations, level : int):
+    for key in sorted(durations.keys()):
+        print_percentile(durations[key], key, level)
+
+def percentile(durations : dict, level : int):
+    return int(np.percentile(durations, level))
+
+def output_results(durations : dict, level : int):
+
+    percentages = {k: percentile(v, level) for k, v in durations.items()}
+
+    del percentages['all']
+    df = pd.DataFrame.from_dict(percentages, orient='index')
+    print('columns')
+    for col in df.columns:
+        print(f'|{col}|')
+    # df.set_axis( labels=['P'+str(level)], axis=1)
+    # df.rename(['P95'])
+    df.sort_values(0, inplace=True)
+    print(df.to_string())
+
+
+    print_percentile(durations['all'], 'all', level)
+
+def main():
+    parser = argparse.ArgumentParser(description='Reads aspen wildfly log and determines p90, p95, p99 response times')
+    parser.add_argument('filename', type=str, help='Aspen Wildfly log file' )
+    parser.add_argument('--split', action='store_true', help='Split times out by request type' )
+    args = parser.parse_args()
+
+    durations = get_split_durations(args.filename, args.split)
+    if len(durations) == 0:
+        print('No request durations in log')
+    else:
+        #print_percentiles(durations, 95)
+        output_results(durations, 95)
+
+
+
+if __name__ == "__main__":
+    main()
