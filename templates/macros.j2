@@ -1,0 +1,55 @@
+
+{% macro level(value='') -%}
+    {% if value == "INFO" %}
+        <span style="color:grey">{{value}}</span>
+    {% elif value == "SECURITY" %}
+        <span style="color:red">{{value}}</span>
+    {% elif value == "SEVERE" %}
+        <span style="color:red">{{value}}</span>
+    {% elif value == "ERROR" %}
+        <span style="color:red">{{value}}</span>
+    {% elif value == "WARN" %}
+        <span style="color:orange">{{value}}</span>
+    {% else %}
+        <span >{{value}}</span>
+    {% endif %}
+{%- endmacro %}
+
+{% macro duration(value='') -%}
+    {% set number = value | int %}
+    {% if number > 0 %}
+        {% if number >= 5000 %}
+            <span style="color:Fuchsia;font-weight:bolder;">
+        {% elif number >= 3000 %}
+            <span style="color:red">
+        {% elif number >= 2000 %}
+            <span style="color:orangered">
+        {% elif number >= 1000 %}
+            <span style="color:yellowgreen">
+        {% else %}
+            <span style="color:forestgreen">
+        {% endif %}
+        {{ "{:,d}".format(number) }}
+        </span>
+    {% endif %}
+{%- endmacro %}
+
+{% macro response_code(value='') -%}
+    {% set number = value | int %}
+    {% if number > 0 %}
+        {% if number >= 500 %}
+            <span style="color:Fuchsia;font-weight:bolder;">
+        {% elif number >= 400 %}
+            <span style="color:red">
+        {% elif number >= 300 %}
+            <span style="color:yellowgreen">
+        {% elif number >= 200 %}
+            <span style="color:forestgreen">
+        {% else %}
+            <span style="color:black">
+        {% endif %}
+        {{ number }}
+        </span>
+    {% endif %}
+{%- endmacro %}
+

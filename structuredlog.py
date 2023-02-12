@@ -14,7 +14,17 @@ log_entry_pattern = re.compile( r'^(?P<timestamp>\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d
 #                                                                                             ^- debug level - INFO, ERROR, etc
 #                                ^- timestamp at beginning of line
 
-request_pattern = re.compile(r'')
+guid_pattern = re.compile(r'[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}')
+# guid is pattern of hex digit (0-f) in a pattern of 8-4-4-4-12
+
+request_pattern = re.compile(r'^(?P<tenant>[a-zA-Z-]+)\t(?P<duration>[^\t]+)\t(?P<ipaddr>[0-9.]+)\t(?P<response_code>[0-9-]+)\t(?P<method>[a-zA-Z]+)\t(?P<path>[^\t]+)\t(?P<remainder>.*)$')
+#                                                                                                                                                                        ^- everything else to end of line
+#                                                                                                                                                      ^- url path, accepts anything until next tab
+#                                                                                                                                 ^- method: letters, e.g. GET, POST, etc
+#                                                                                                   ^- response code: numbers or -, e.g. 200, 400, ---
+#                                                                               ^- ip address: digits or .
+#                                                          ^- duration: everything until next tab.  Expects either --- or ####ms
+#                                  ^- tenant: letters or -, e.g. ma-somerset 
 
 
 class LogType(Enum):
@@ -37,6 +47,29 @@ class LogEntry:
             self.type = LogType.EXCEPTION
         else:
             self.type = LogType.PLAIN
+            request_match = request_pattern.match(self.message)
+            if request_match:
+                self.tenant = request_match['tenant']
+                self.duration = request_match['duration'].removesuffix('ms')
+                self.ipaddr = request_match['ipaddr']
+                self.response_code = request_match['response_code']
+                self.method = request_match['method']
+                self.path = request_match['path']
+                self.remainder = request_match['remainder']
+                if self.response_code == '---':
+                    self.type = LogType.REQUEST
+                else:
+                    self.type = LogType.RESPONSE
+            else:
+                self.tenant = ''
+                self.duration = ''
+                self.ipaddr = ''
+                self.response_code = ''
+                self.method = ''
+                self.path = ''
+                self.remainder = ''
+                self.type = LogType.PLAIN
+
 
     def is_logentry(self, match : re.Match[str]) -> bool:
         return match != None
@@ -44,9 +77,9 @@ class LogEntry:
     def get_exception(self):
         if self.type != LogType.EXCEPTION:
             return ''
-        text = self.message
+        text = guid_pattern.sub('GUID', self.message)
         for line in self.caused_by():
-            text += '\n\t' + line
+            text += '\n\t' + guid_pattern.sub('GUID', line)
         return text
 
     def caused_by(self) -> List[str]:

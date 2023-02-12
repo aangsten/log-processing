@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Exceptions{% endblock %}
+
+{% block content %}
+    Note: many exceptions have a GUID identifier in the text.  These are replaced with 'GUID' for better exception combining.
+  <table cellspacing="5">
+  {% for exception in exceptions_sorted %}
+    <tr>
+        <td style="vertical-align: top;">
+            <a href="/exception-entry/{{loop.index0}}">{{exception.log_entries | length}}</a>
+        </td>
+        <td>
+            <div>
+                {% set list = exception.text.split('\n') %}
+                {% for item in list %}
+                    {{ item }}
+                    {% if not loop.last %}
+                        <br/>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </td>
+    </tr>  
+  {% endfor %}
+  </table>
+{% endblock %}

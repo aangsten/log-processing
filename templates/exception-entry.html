@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from '/macros.j2' import level %}
+{% block title %}Exception{% endblock %}
+
+{% block content %}
+<h2>Caused by</h2>
+<div>
+    {% set list = exception.text.split('\n') %}
+    {% for item in list %}
+        {{ item }}
+        {% if not loop.last %}
+            <br/>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<h2>Log Entries</h2>
+{% for exception in exception.log_entries %}
+    Timestamp: {{exception.timestamp}}<br/>
+    Level: {{ level(exception.level) }}<br/>
+    Source: {{exception.source}}<br/>
+    Thread: <a href="/thread-logs/{{exception.thread}}">{{exception.thread}}</a><br/>
+    Message: {{exception.message}}<br/>
+    <br/>
+{% endfor %}
+
+{% endblock %}
