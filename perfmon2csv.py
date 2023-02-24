@@ -1,13 +1,23 @@
 import argparse
+from collections import defaultdict
 from io import TextIOWrapper
 import re
 import sys
 from typing import List
+import pandas as pd 
+from dateutil.parser import parse
 
-perfmon_logline_pattern = re.compile( '^(?P<timestamp>\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d,\\d+) *\\w+\\s+\\[org.perfmon4j.TextAppender\\] \\(PerfMon.utilityTimer\\)')
-#                                                                                                                     ^- perfmon pattern
-#                                                                                                            ^- debug level
+perfmon_logline_pattern = re.compile( '^(?P<log_date>\\d\\d\\d\\d-\\d\\d-\\d\\d) (?P<log_time>\\d\\d:\\d\\d:\\d\\d,\\d+) *\\w+\\s+\\[org.perfmon4j.TextAppender\\] \\(PerfMon.utilityTimer\\)')
+#                                                                                                                                    ^- perfmon logger pattern
+#                                                                                                                         ^- debug level
 #                                      ^- timestamp at beginning of line
+
+sample_range_pattern = re.compile( r'(?P<sample_start>\d\d:\d\d:\d\d):\d\d\d -> (?P<sample_end>\d\d:\d\d:\d\d):\d\d\d' )
+#                                                                                                             ^- milliseconds, not collected
+#                                                                                   ^- sample end time
+#                                                                            ^- arrow to separte start and end
+#                                                                     ^- milliseconds, not collected
+#                                      ^- sample start time
 
 counter_value_pattern = re.compile( '^ (?P<name>.+)\\. (?P<value>[0-9.-]*)(?P<extra>.*)$')
 #                                                                          ^- match everything to end of line
@@ -17,13 +27,25 @@ counter_value_pattern = re.compile( '^ (?P<name>.+)\\. (?P<value>[0-9.-]*)(?P<ex
 #                                     ^- first column is the space
 
 class PerfmonEntry:
-    def __init__(self, timestamp : str):
-        self.timestamp = timestamp.replace(',', '.')
+    def __init__(self, log_date : str, log_time : str):
+        self.log_date = log_date
+        self.log_time = log_time.replace(',', '.')
         self.counter_name = ''
-        self.sample_range = ''
+        self.sample_start = None
+        self.sample_end = None
         self.entries = dict()
         self.lifetime_entries = False
         self.names = []
+
+    def to_dict(self):
+        values = {
+            'log_date': self.log_date,
+            'log_time': self.log_time,
+            'counter_name' : self.counter_name,
+            'sample_start' : f'{self.log_date} {self.sample_start}',
+            'sample_end' : f'{self.log_date} {self.sample_end}'
+        }
+        return values | self.entries
 
     def process(self, line : str) -> bool:
         if line == '********************************************************************************':
@@ -31,8 +53,12 @@ class PerfmonEntry:
         if len(self.counter_name) == 0:
             self.counter_name = line
             return False
-        if len(self.sample_range) == 0:
-            self.sample_range = line
+        if self.sample_start == None:
+            range_match = sample_range_pattern.match(line)
+            if not range_match:
+                raise Exception(f'Unable to parse sample range [{line}]')
+            self.sample_start = parse( f"{self.log_date} {range_match.group('sample_start')}" )
+            self.sample_end = parse( f"{self.log_date} {range_match.group('sample_end')}" )
             return False
         if line.startswith('Lifetime'):
             self.lifetime_entries = dict()
@@ -43,7 +69,10 @@ class PerfmonEntry:
             name_extra = name + '_extra'
             self.names.append(name)
             self.names.append(name_extra)
-            self.entries[name] = values.group('value')
+            if len(values.group('value')) > 0:
+                self.entries[name] = float(values.group('value')) 
+            else:
+                self.entries[name] = None
             self.entries[name_extra] = values.group('extra')
             #print (name,'|', values.group('value'))
         else:
@@ -51,15 +80,15 @@ class PerfmonEntry:
         return False
 
     def print_csv_header(self):
-        output = 'counter_name,timestamp,time_range'
+        output = 'counter_name,log_date,log_time,sample_start,sample_end'
         for name in self.names:
             output += ',' + name
         print(output)
 
     def print_csv(self):
-        output = self.counter_name + ',' + self.timestamp + ',' + self.sample_range
+        output = self.counter_name + ',' + self.log_date + ',' + self.log_time + ',' + str(self.sample_start) + ',' + str(self.sample_end)
         for name in self.names:
-            output += ',' + self.entries[name]
+            output += ',' + str(self.entries[name])
         print(output)
 
 
@@ -67,7 +96,7 @@ class PerfmonEntry:
 def process_log_line(line : str) -> PerfmonEntry:
     match = perfmon_logline_pattern.match(line)
     if match:
-        return PerfmonEntry(match.group('timestamp'))
+        return PerfmonEntry(match.group('log_date'),match.group('log_time'))
     return None
 
 
@@ -88,7 +117,7 @@ def process_file(open_file: TextIOWrapper) -> List[PerfmonEntry]:
 
     return perfmon_entries
 
-def process( file_name : str) -> List[PerfmonEntry]:
+def process_perfmon( file_name : str) -> List[PerfmonEntry]:
     with open(file_name) as open_file:
         return process_file(open_file)
 
@@ -113,6 +142,32 @@ def print_csv(perfmon_entries : List[PerfmonEntry], counter_name : str, output_f
         sys.stdout.close()
         sys.stdout = original_stdout
 
+def perfmon_to_dataframe(perfmon_entries : List[PerfmonEntry], counters):
+    df_data = defaultdict(dict)
+
+    # for each perfmon_entry, see if it has each counter.
+    for perfmon_entry in perfmon_entries:
+        key = perfmon_entry.sample_start
+        for counter in counters:
+            if counter in perfmon_entry.entries:
+                df_data[key][counter] = perfmon_entry.entries[counter]
+
+    sorted_keys = sorted(df_data.keys())
+    sorted_data = [df_data[key] for key in sorted_keys ]
+    
+    df = pd.DataFrame(sorted_data, index=sorted_keys, columns=counters)
+    return df
+
+def get_dataframe(perfmon_entries : List[PerfmonEntry]):
+    data_lists = defaultdict(list)
+    for perfmon_entry in perfmon_entries:
+        data_lists[perfmon_entry.counter_name].append(perfmon_entry)
+    
+    df = pd.DataFrame([i.to_dict() for i in data_lists.values()[0]])
+
+    return df
+
+
 def main():
 
     parser = argparse.ArgumentParser(description='Reads log file and extracts ')
@@ -122,7 +177,7 @@ def main():
     parser.add_argument('--output', action='store', default='', required=False, help='Output file name for csv (defaults to stdout)')
     args = parser.parse_args()
 
-    perfmon_entries = process(args.filename)
+    perfmon_entries = process_perfmon(args.filename)
     if args.list:
         list_counters(perfmon_entries)
     if args.csv:

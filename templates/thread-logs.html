@@ -13,13 +13,14 @@
     <th>timestamp</th>
     <th>level</th>
     <th>source</th>
+    <th>thread</th>
     <th>tenant</th>
     <th>duration(ms)</th>
     <th>ip address</th>
-    <th>code</th>
-    <th>meth</th>
+    <th>code</th> 
+    <th>method</th>
     <th style="text-align: left;">path</th>
-    <th>remainder</th>
+    <th>session id</th>
 </tr>
 
 {% for entry in log_entries %}
@@ -27,13 +28,14 @@
     <td style="font-size: small;" title="line {{entry.line_number}}" >{{ entry.timestamp }}</td>
     <td>{{ level(entry.level) }}</td>
     <td style="font-size: x-small;">{{ entry.source }}</td>
+    <td>{{ entry.thread }}</td>
     {% if entry.type.name == "EXCEPTION" %}
         <td></td>
         <td></td>
         <td></td>
         <td></td>
         <td></td>
-        <td colspan="100">{{ entry.message }}
+        <td colspan="100">{{ entry.message }}  
             {% if entry.lines %}
                 <details>
                     <summary>Details</summary>
@@ -51,7 +53,11 @@
         <td style="text-align:right;">{{ duration(entry.duration) }}</td>
         <td>{{ entry.ipaddr  }}</td>
         <td>{{ response_code(entry.response_code) }}</td>
-        <td>{{ entry.method  }}</td>
+        {% if entry.sessionid %}
+            <td><a href="/session-logs/{{ entry.sessionid }}">{{ entry.method  }}</a></td>
+        {% else %}
+            <td>{{ entry.method  }}</td>
+        {% endif %}
         <td>{{ entry.path  }}</td>
         <td>{{ entry.remainder  }}</td>
     {% endif %}

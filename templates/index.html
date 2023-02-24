@@ -1,12 +1,20 @@
-<html>
-    <body>
-        <ul>
-            <li>
-                <a href="/exceptions">Exceptions</a>
-            </li>
-            <li>
-                <a href="/logs">Logs</a>
-            </li>    
-        </ul>
-    </body>
-</html>
+{% extends "base.html" %}
+{% block title %}Exceptions{% endblock %}
+
+{% block content %}
+
+<ul>
+    <li>
+        <a href="/exceptions">Exceptions:</a> <strong>{{exception_sum}}</strong> total exceptions
+    </li>
+    <li>
+        <a href="/logs">Logs (comming soon...)</a>
+    </li>    
+    <li>
+        <a href="/performance">Performance (comming soon...)</a>
+    </li>    
+</ul>
+
+
+
+{% endblock %}

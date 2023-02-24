@@ -17,7 +17,7 @@ log_entry_pattern = re.compile( r'^(?P<timestamp>\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d
 guid_pattern = re.compile(r'[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}')
 # guid is pattern of hex digit (0-f) in a pattern of 8-4-4-4-12
 
-request_pattern = re.compile(r'^(?P<tenant>[a-zA-Z-]+)\t(?P<duration>[^\t]+)\t(?P<ipaddr>[0-9.]+)\t(?P<response_code>[0-9-]+)\t(?P<method>[a-zA-Z]+)\t(?P<path>[^\t]+)\t(?P<remainder>.*)$')
+request_pattern = re.compile(r'^(?P<tenant>[a-zA-Z-]+)\t(?P<duration>[^\t]+)\t(?P<ipaddr>[0-9.]+)\t(?P<response_code>[0-9-]+)\t(?P<method>[a-zA-Z]+)\t(?P<path>[^\t]+)\t(?P<sessionid>.*)$')
 #                                                                                                                                                                        ^- everything else to end of line
 #                                                                                                                                                      ^- url path, accepts anything until next tab
 #                                                                                                                                 ^- method: letters, e.g. GET, POST, etc
@@ -55,7 +55,7 @@ class LogEntry:
                 self.response_code = request_match['response_code']
                 self.method = request_match['method']
                 self.path = request_match['path']
-                self.remainder = request_match['remainder']
+                self.sessionid = request_match['sessionid']
                 if self.response_code == '---':
                     self.type = LogType.REQUEST
                 else:
@@ -67,7 +67,7 @@ class LogEntry:
                 self.response_code = ''
                 self.method = ''
                 self.path = ''
-                self.remainder = ''
+                self.sessionid = ''
                 self.type = LogType.PLAIN
 
 
@@ -136,6 +136,8 @@ def process_file(open_file: TextIOWrapper) -> List[LogEntry]:
     return log_entries
 
 def process( file_name : str) -> List[LogEntry]:
+    if not file_name:
+        return []
     with open(file_name) as open_file:
         return process_file(open_file)
 
