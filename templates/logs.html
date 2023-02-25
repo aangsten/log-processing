@@ -1,7 +1,69 @@
-<html>
-    <body>
-        <h1>Logs
-        <br>
-        <img src="https://images.idgesg.net/images/article/2019/07/logs-100806633-large.jpg?auto=webp&quality=85,70" />
-    </body>
-</html>
+{% extends "base.html" %}
+{% from '/macros.j2' import level, duration, response_code %}
+
+
+{% block title %}Thread{% endblock %}
+
+{% block content %}
+
+<h2>Log Entries</h2>
+<table cellspacing="5">
+<tr>
+    <th>timestamp</th>
+    <th>level</th>
+    <th>source</th>
+    <th>thread</th>
+    <th>tenant</th>
+    <th>duration(ms)</th>
+    <th>ip address</th>
+    <th>code</th> 
+    <th>method</th>
+    <th style="text-align: left;">path</th>
+    <th>session id</th>
+</tr>
+
+{% for entry in log_entries %}
+<tr style="vertical-align: top;">
+    <td style="font-size: small;" title="line {{entry.line_number}}" >{{ entry.timestamp }}</td>
+    <td>{{ level(entry.level) }}</td>
+    <td style="font-size: x-small;">{{ entry.source }}</td>
+    <td>{{ entry.thread }}</td>
+    {% if entry.type.name == "EXCEPTION" %}
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td colspan="100">{{ entry.message }}  
+            {% if entry.lines %}
+                <details>
+                    <summary>Details</summary>
+                    {% for line in entry.lines %}
+                        {% if not loop.last %}
+                            <br/>
+                        {% endif %}
+                        {{ line }}
+                    {% endfor %}
+                </details>
+            {% endif %}
+        </td>
+    {% else %}
+        <td>{{ entry.tenant  }}</td>
+        <td style="text-align:right;">{{ duration(entry.duration) }}</td>
+        <td>{{ entry.ipaddr  }}</td>
+        <td>{{ response_code(entry.response_code) }}</td>
+        {% if entry.sessionid %}
+            <td><a href="/session-logs/{{ entry.sessionid }}">{{ entry.method  }}</a></td>
+        {% else %}
+            <td>{{ entry.method  }}</td>
+        {% endif %}
+        <td>{{ entry.path  }}</td>
+        <td>{{ entry.remainder  }}</td>
+    {% endif %}
+
+
+</tr>  
+{% endfor %}
+</table>
+
+{% endblock %}

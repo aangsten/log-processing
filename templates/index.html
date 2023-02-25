@@ -1,17 +1,21 @@
 {% extends "base.html" %}
+{% from '/macros.j2' import level, duration, response_code %}
+
 {% block title %}Exceptions{% endblock %}
 
 {% block content %}
 
+<h1>Aspen Log-a-matic</h1>
+
 <ul>
     <li>
-        <a href="/exceptions">Exceptions:</a> <strong>{{exception_sum}}</strong> total exceptions
+        <a href="/exceptions">Exceptions:</a> <br><strong>{{exception_sum}}</strong> total exceptions
     </li>
     <li>
-        <a href="/logs">Logs (comming soon...)</a>
+        <a href="/logs">Logs</a>
     </li>    
     <li>
-        <a href="/performance">Performance (comming soon...)</a>
+        <a href="/performance">Performance (comming soon...)</a><br> 95th percentile response time: {{ duration(p95) }}ms
     </li>    
 </ul>
 

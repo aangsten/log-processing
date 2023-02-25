@@ -2,12 +2,13 @@
 {% from '/macros.j2' import level, duration, response_code %}
 
 
-{% block title %}Thread{% endblock %}
-
+{% block title %}{{log_type}}{% endblock %}
 {% block content %}
-<h2>Thread {{thread_id}}</h2>
-
+<h2>{{log_type}} - {{log_filter_id}}</h2>
 <h2>Log Entries</h2>
+<br>
+Click on method (GET/POST) for a request to fliter to log entries for that user session.
+<br>
 <table cellspacing="5">
 <tr>
     <th>timestamp</th>

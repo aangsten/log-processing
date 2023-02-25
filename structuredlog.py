@@ -6,6 +6,7 @@ from typing import Dict, List
 import numpy as np
 import argparse
 import pandas as pd
+import numpy as np
 
 log_entry_pattern = re.compile( r'^(?P<timestamp>\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d,\d\d\d)\s+(?P<level>[A-Z]+)\s+\[(?P<source>[^]]+)\]\s+\((?P<thread>[^)]+)\) (?P<message>.*)$')
 #                                                                                                                                                                  ^- rest of line is message
@@ -50,7 +51,11 @@ class LogEntry:
             request_match = request_pattern.match(self.message)
             if request_match:
                 self.tenant = request_match['tenant']
-                self.duration = request_match['duration'].removesuffix('ms')
+                duration_str = request_match['duration'].removesuffix('ms')
+                if duration_str == '---':
+                    self.duration = None
+                else:
+                    self.duration = int(duration_str)
                 self.ipaddr = request_match['ipaddr']
                 self.response_code = request_match['response_code']
                 self.method = request_match['method']
@@ -148,6 +153,14 @@ def show_exceptions(log_entries : List[LogEntry]):
             counter[entry.get_exception()] += 1
     for exception, count in counter.most_common(10):
         print(f"Count: {count} Exception: {exception}")
+
+# given a list of LogEntry, calculate the 95th percentile response time
+def calculate_p95(log_entries : List[LogEntry]) -> int:
+    times_raw = [log_entry.duration for log_entry in log_entries if log_entry.type == LogType.RESPONSE]
+    times = np.array(times_raw)
+    return int(np.percentile(times, 95))
+    # return 99
+
 
 def main():
 
