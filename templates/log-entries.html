@@ -7,7 +7,7 @@
 <h2>{{log_type}} - {{log_filter_id}}</h2>
 <h2>Log Entries</h2>
 <br>
-Click on method (GET/POST) for a request to fliter to log entries for that user session.
+Click on method (GET/POST) for a request to filter to log entries for that user session.
 <br>
 <table cellspacing="5">
 <tr>
@@ -55,7 +55,7 @@ Click on method (GET/POST) for a request to fliter to log entries for that user 
         <td>{{ entry.ipaddr  }}</td>
         <td>{{ response_code(entry.response_code) }}</td>
         {% if entry.sessionid %}
-            <td><a href="/session-logs/{{ entry.sessionid }}">{{ entry.method  }}</a></td>
+            <td><a href="/session-logs/{{ entry.sessionid }}">{{ entry.method  }}{{ "🡒" if entry.type.name == "REQUEST" }}{{ "🡐" if entry.type.name == "RESPONSE" }}</a></td>
         {% else %}
             <td>{{ entry.method  }}</td>
         {% endif %}
