@@ -4,6 +4,15 @@
 
 {% block title %}{{log_type}}{% endblock %}
 {% block content %}
+<style>
+    tr {
+        height: 1px;
+    }
+    td {
+        height: inherit;
+        padding: 0px 1px 0px 1px;
+    }
+</style>
 <h2>{{log_type}} - {{log_filter_id}}</h2>
 <h2>Log Entries</h2>
 <br>
@@ -15,6 +24,7 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
     <th>level</th>
     <th>source</th>
     <th>thread</th>
+    <th>jobs</th>
     <th>tenant</th>
     <th>duration(ms)</th>
     <th>ip address</th>
@@ -30,7 +40,8 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
     <td>{{ level(entry.level) }}</td>
     <td style="font-size: x-small;">{{ entry.source }}</td>
     <td>{{ entry.thread }}</td>
-    {% if entry.type.name == "EXCEPTION" %}
+    <td><div style="background-image: linear-gradient(90deg, blue, red); height: 100%;max-width: {{ entry.concurrent_jobs * 2 }}px; min-width: {{ entry.concurrent_jobs * 2 }}px;"></div></td>
+    {% if entry.type.name == "EXCEPTION" or entry.type.name == "PLAIN" %}
         <td></td>
         <td></td>
         <td></td>

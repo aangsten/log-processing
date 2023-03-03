@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from '/macros.j2' import level, duration, response_code %}
+
+
+{% block title %}Tool entries{% endblock %}
+{% block content %}
+<h2>Tools - {{tool_entries | length}} runs</h2>
+<br>
+<table cellspacing="5" style="text-align: left;">
+<tr>
+    <th>timestamp</th>
+    <th>DeploymentId</th>
+    <th>Tool Id</th>
+    <th>Name</th>
+    <th>Location</th>
+    <th>duration</th>
+    <th cellspan="2">Parameters</th>
+</tr>
+
+{% for tool in tool_entries %}
+<tr style="vertical-align: top;">
+    <td style="font-size: small;" title="line {{tool.entry.line_number}}" >{{ tool.entry.timestamp }}</td>
+    <td>{{ tool.deploymentId }}</td>
+    <td>{{ tool.toolId }}</td>
+    <td>{{ tool.toolName }}</td>
+    <td>{{ tool.location }}</td>
+    <td>{% if tool.type.name == "FINISH"  %}
+            {{ tool.duration }}
+        {% endif %}
+    </td>
+    <td cellspan="2"></td>
+</tr>
+{% if tool.type.name == "START"  %}
+    {% for name, value in tool.parameters.items() %}
+        <tr>
+            <td cellspan="5"></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>{{name}}</td>
+            <td>{{value}}</td>
+        </tr>
+    {% endfor %}
+{% endif %}
+{% endfor %}
+</table>
+
+{% endblock %}

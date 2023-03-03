@@ -1,22 +1,33 @@
 
 import argparse
 from typing import List
-from flask import Flask, render_template
+from flask import render_template
+import connexion
 
 from structuredlog import calculate_p95, process, LogEntry, LogType
 from exception_entry import ExceptionEntry, get_exceptions
+from tool_entry import ToolEntry, get_tools_and_mark_log_entries_with_concurrent_jobs, ToolEntryType, ToolLocationType
 
-app = Flask(__name__)
+# app = Flask(__name__)
+app = connexion.App(__name__, specification_dir="./")
+
 log_entries : List[LogEntry] = []
 exceptions_sorted : List[ExceptionEntry] = []
-
+tool_entries : List[ToolEntry] = []
 
 @app.route('/')
 def route_index():
-    exception_sum = sum([len(exception.log_entries) for exception in exceptions_sorted])
-    p95 = calculate_p95(log_entries)
-    print( f'p95 {p95}')
-    return render_template("index.html", exception_sum=exception_sum, p95=p95)
+    context = {
+        "exception_sum": sum([len(exception.log_entries) for exception in exceptions_sorted]),
+        "p95": calculate_p95(log_entries),
+        "started_len": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START ),
+        "finished_len": sum(1 for tool in tool_entries if tool.type == ToolEntryType.FINISH ),
+        "report_local_deliberate": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.LOCAL_DELIBERATE.name ),
+        "report_local_unserializable": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.LOCAL_UNSERIALIZABLE.name ),
+        "report_remote": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.REMOTE.name ),
+    }
+
+    return render_template("index.html", **context)
 
 @app.route('/exceptions')
 def route_exceptions():
@@ -45,6 +56,12 @@ def route_logs():
     global log_entries
     return render_template("log-entries.html", log_entries=log_entries, log_filter_id='', log_type='Logs')
 
+@app.route('/tools')
+def route_tools():
+    started_len = sum(1 for tool in tool_entries if tool.type == ToolEntryType.START )
+    finished_len = sum(1 for tool in tool_entries if tool.type == ToolEntryType.FINISH )
+    return render_template("tool-entries.html", tool_entries=tool_entries, started_len=started_len, finished_len=finished_len )
+
 @app.route('/performance')
 def route_performance():
     global log_entries
@@ -52,6 +69,9 @@ def route_performance():
     print(log_entries)
     return render_template("performance.html", log_entries=log_entries)
 
+def api_logs():
+    global log_entries
+    return log_entries
 
 def main():
     parser = argparse.ArgumentParser(description='Reads log file and extracts ')
@@ -60,9 +80,12 @@ def main():
     parser.add_argument('--aspen', action='store', default='', required=False, help='Aspen log filename')
     args = parser.parse_args()
     print(args)
-    global log_entries, exceptions_sorted
+    global log_entries, exceptions_sorted, tool_entries
     log_entries = process(args.server)
     exceptions_sorted = get_exceptions(log_entries)
+    tool_entries = get_tools_and_mark_log_entries_with_concurrent_jobs(log_entries)
+    print(len(tool_entries))
+    # app.add_api("swagger.yaml")
     app.run(debug=True, host='0.0.0.0')
 
 if __name__ == '__main__':

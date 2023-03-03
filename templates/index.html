@@ -5,17 +5,38 @@
 
 {% block content %}
 
+<style>
+    li {
+        padding-top: 10px
+    }
+</style>
+
 <h1>Aspen Log-a-matic</h1>
 
 <ul>
     <li>
-        <a href="/exceptions">Exceptions:</a> <br><strong>{{exception_sum}}</strong> total exceptions
+        <a href="/exceptions">Exceptions:</a> <br>
+        <strong>{{exception_sum}}</strong> total exceptions
     </li>
     <li>
         <a href="/logs">Logs</a>
     </li>    
     <li>
-        <a href="/performance">Performance (comming soon...)</a><br> 95th percentile response time: {{ duration(p95) }}ms
+        <a href="/tools">Tools</a><br>
+        <table>
+            <tbody>
+                <tr><td>Completion</td><td>started</td><td>{{ started_len }}</td></tr>
+                <tr><td></td>          <td>finished</td><td>{{ finished_len }}</td></tr>
+                <tr><td>Location</td><td>remote</td><td>{{ report_remote }}</td></tr>
+                <tr><td>        </td><td>local, deliberate</td><td>{{ report_local_deliberate }}</td></tr>
+                <tr><td>        </td><td>local, unserializable</td><td>{{ report_local_unserializable }}</td></tr>
+            </tbody>
+
+        </table>
+    </li>    
+    <li>
+        <a href="/performance">Performance (comming soon...)</a><br>
+        95th percentile response time: {{ duration(p95) }}ms
     </li>    
 </ul>
 
