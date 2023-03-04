@@ -47,6 +47,5 @@ def get_tools_and_mark_log_entries_with_concurrent_jobs(log_entries) -> List[Too
             tool_entry = ToolEntry(entry)
             tool_entries.append(tool_entry)
             running_count += 1 if tool_entry.is_start() else -1
-            print(f'added tool {tool_entry.type.name} count is',running_count)
         entry.concurrent_jobs = running_count
     return tool_entries

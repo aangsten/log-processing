@@ -28,6 +28,12 @@ request_pattern = re.compile(r'^(?P<tenant>[a-zA-Z-]+)\t(?P<duration>[^\t]+)\t(?
 #                                  ^- tenant: letters or -, e.g. ma-somerset 
 
 
+# patterns used to remove information from RESPONSE so they can be grouped better
+sessionid_pattern = re.compile( 'jsessionid=.*')
+oid_pattern = re.compile( '/[a-zA-Z]{3}[a-zA-Z$0-9]{11}/')
+oid_other_pattern = re.compile( r'/(banner|assignments|submissions)/.*')
+
+
 class LogType(Enum):
     PLAIN = 1
     REQUEST = 2
@@ -43,6 +49,7 @@ class LogEntry:
         self.source = match.group('source')
         self.thread = match.group('thread')
         self.message = match.group('message')
+        self.concurrent_jobs = 0
         self.lines = []
         if self.message.find('Exception') != -1:
             self.type = LogType.EXCEPTION
@@ -79,6 +86,7 @@ class LogEntry:
     def is_logentry(self, match : re.Match[str]) -> bool:
         return match != None
     
+    # Gets exception text.  For non-exception log entries, returns ''
     def get_exception(self):
         if self.type != LogType.EXCEPTION:
             return ''
@@ -87,10 +95,28 @@ class LogEntry:
             text += '\n\t' + guid_pattern.sub('GUID', line)
         return text
 
+    # Scans the lines array for lines with 'Caused by'
     def caused_by(self) -> List[str]:
         if len(self.lines) == 0:
             return []
         return list(filter( lambda line: line.find('Caused by') != -1, self.lines))
+
+    def is_request(self):
+        return self.type == LogType.REQUEST
+
+    def is_response(self):
+        return self.type == LogType.RESPONSE
+
+    # Gets response message, with specific information scrubbed so they can be grouped better
+    # log types other than response will return None
+    def get_deidentified_path(self):
+        if not (self.is_response() or self.is_request()):
+            return None
+        request =  self.path.split('?', 1)[0]
+        request = re.sub( sessionid_pattern, 'jsessionid', request)
+        request = re.sub( oid_pattern, '/*OID*/', request)
+        request = re.sub( oid_other_pattern, r'/\1/*OID*', request)
+        return request
 
     def dump(self):
         print('>*******************************')
@@ -119,7 +145,7 @@ def process_line( log_entries : List[LogEntry], thread_entries, line_number : in
     if match:
         log = LogEntry(match, line_number)
         if log.message.startswith('\t') and log.thread in thread_entries:
-            thread_entries[log.thread].add_line(log.message)
+            thread_entries[log.thread].add_line(log.message)  #note: we throw away log object and just use the message text here
         else:
             log_entries.append(log)
             thread_entries[log.thread] = log
