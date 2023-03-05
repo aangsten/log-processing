@@ -4,6 +4,16 @@
 
 {% block title %}Tool entries{% endblock %}
 {% block content %}
+<style>
+    .param-row {
+        padding-top: 0px;
+        padding-bottom: 0px;
+    }
+    .param-row td {
+        padding-top: 0px;
+        padding-bottom: 0px;
+    }
+</style>
 <h2>Tools - {{tool_entries | length}} runs</h2>
 <br>
 <table cellspacing="5" style="text-align: left;">
@@ -28,11 +38,11 @@
             {{ tool.duration }}
         {% endif %}
     </td>
-    <td cellspan="2"></td>
+    <td cellspan="2">{{ tool.type.name }}</td>
 </tr>
 {% if tool.type.name == "START"  %}
     {% for name, value in tool.parameters.items() %}
-        <tr>
+        <tr class="param-row">
             <td cellspan="5"></td>
             <td></td>
             <td></td>

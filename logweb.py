@@ -1,7 +1,8 @@
 
+import pandas as pd
 import argparse
 from typing import List
-from flask import render_template
+from flask import render_template, request
 import connexion
 from log_analysis import get_dataframe, get_durations
 
@@ -65,14 +66,44 @@ def route_tools():
     finished_len = sum(1 for tool in tool_entries if tool.type == ToolEntryType.FINISH )
     return render_template("tool-entries.html", tool_entries=tool_entries, started_len=started_len, finished_len=finished_len )
 
-def make_link(val):
+# makes a link to requests path, filtered to paths that match val
+def make_requests_link(val):
+    print(f'make_requests_link <{val}>',type(val))
     return f'<a href="/requests{val}">{val}</a>'
+
+def make_clickable(val, current_sort, descending):
+    if current_sort == val and not descending:
+        return '<a href="/performance?sort=' + val + '&descending=True">' + val + '▲</a>'
+    elif current_sort == val:
+        return '<a href="/performance?sort=' + val + '">' + val + '▼</a>'
+    else:
+        return '<a href="/performance?sort=' + val + '">' + val + '</a>'
+
 
 @app.route('/performance')
 def route_performance():
-    df['Link'] = df['Request'].apply( make_link)
     print(df.head())
-    return render_template("performance.html", data=df.to_html(escape=False))
+    print('sort', request.args.get('sort'))
+    #html_table = df.to_html(escape=False)
+
+    sort_param = request.args.get('sort')
+    descending_param = request.args.get('descending') == "True"
+
+    make_clickable_with_current = lambda x: make_clickable(x, sort_param, descending_param)
+
+    if sort_param:
+        final_df = df.sort_values(by=[sort_param], ascending=not descending_param)
+    else:
+        final_df = df
+
+    html_table = (final_df.style
+            .format(precision=0, thousands=",") # todo - why is this not working anymore, it was.  might be related to make_requests_link format call 
+            .format_index(make_clickable_with_current, axis="columns")
+            .set_properties(**{'text-align': 'right'}, subset=df.columns[1:])
+            .format({df.columns[0]:make_requests_link}, subset=df.columns[1:])
+            .hide_index()
+            .render())
+    return render_template("performance.html", data=html_table)
 
 @app.route('/requests/<path:path>')
 def route_requests(path):
@@ -89,6 +120,9 @@ def api_logs():
     global log_entries
     return log_entries
 
+def column_format(x):
+    print(f'column format <{x}>')
+    return f'<a href="http://google.com">{x}</a>'
 
 
 def main():
@@ -104,7 +138,8 @@ def main():
     tool_entries = get_tools_and_mark_log_entries_with_concurrent_jobs(log_entries)
     durations = get_durations(log_entries)
     df = get_dataframe(durations)
- 
+    print('axes',df.axes)
+
     # app.add_api("swagger.yaml")
     app.run(debug=True, host='0.0.0.0')
 

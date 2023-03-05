@@ -31,7 +31,6 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
     <th>code</th> 
     <th>method</th>
     <th style="text-align: left;">path</th>
-    <th>session id</th>
 </tr>
 
 {% for entry in log_entries %}
@@ -39,8 +38,8 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
     <td style="font-size: small;" title="line {{entry.line_number}}" >{{ entry.timestamp }}</td>
     <td>{{ level(entry.level) }}</td>
     <td style="font-size: x-small;">{{ entry.source }}</td>
-    <td>{{ entry.thread }}</td>
-    <td><div style="background-image: linear-gradient(90deg, blue, red); height: 100%;max-width: {{ entry.concurrent_jobs * 2 }}px; min-width: {{ entry.concurrent_jobs * 2 }}px;"></div></td>
+    <td><a href="/thread-logs/{{ entry.thread }}">{{ entry.thread }}</a></td>
+    <td title="{{ entry.concurrent_jobs}} running jobs"><div style="background-image: linear-gradient(90deg, blue, red); height: 100%;max-width: {{ entry.concurrent_jobs * 2 }}px; min-width: {{ entry.concurrent_jobs * 2 }}px;"></div></td>
     {% if entry.type.name == "EXCEPTION" or entry.type.name == "PLAIN" %}
         <td></td>
         <td></td>
@@ -61,6 +60,7 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
             {% endif %}
         </td>
     {% else %}
+        {# this is for REQUEST/RESPONSE #}
         <td>{{ entry.tenant  }}</td>
         <td style="text-align:right;">{{ duration(entry.duration) }}</td>
         <td>{{ entry.ipaddr  }}</td>
@@ -70,8 +70,12 @@ Click on method (GET/POST) for a request to filter to log entries for that user 
         {% else %}
             <td>{{ entry.method  }}</td>
         {% endif %}
-        <td>{{ entry.path  }}</td>
-        <td>{{ entry.remainder  }}</td>
+        <td>
+            <a href="/requests{{ entry.path  }}">{{ entry.path  }}</a>
+            {% if entry.sessionid %}
+                &nbsp;&nbsp;<a href="/session-logs/{{ entry.sessionid  }}">session</a>
+            {% endif %}
+        </td>
     {% endif %}
 
 
