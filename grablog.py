@@ -7,6 +7,7 @@ import pysftp
 import re
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
 Context = namedtuple('Context', 'server output incident_time is_test')
 
@@ -39,6 +40,9 @@ def get_server_files(context: Context, ftp, cluster_dir: str, server_dir: str):
     get_files_in_dir(context, ftp, 'wildflylogs', r'^perfmon4j\.log.*$')
     ftp.chdir("..")
 
+
+
+
 def main():
 
     # command line arguments
@@ -52,6 +56,9 @@ def main():
     incident_time : datetime = dateparser.parse(args.time).astimezone()
 
     context = Context(args.server, args.output, incident_time, args.test)
+
+    #make sure directory exists
+    Path(context.output).mkdir(parents=True, exist_ok=True)
 
     #ftp credentials
     load_dotenv()
