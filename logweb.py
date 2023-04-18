@@ -5,6 +5,7 @@ from typing import List
 from flask import render_template, request
 import connexion
 from log_analysis import get_dataframe, get_durations
+from glob import glob
 
 from structuredlog import calculate_p95, process, LogEntry, LogType
 from exception_entry import ExceptionEntry, get_exceptions
@@ -127,13 +128,19 @@ def column_format(x):
 
 def main():
     parser = argparse.ArgumentParser(description='Reads log file and extracts ')
-    parser.add_argument('--server', action='store', default='', required=False, help='Wildfly log filename')
-    parser.add_argument('--perfmon', action='store', default='', required=False, help='Perfmon4j log filename')
-    parser.add_argument('--aspen', action='store', default='', required=False, help='Aspen log filename')
+    # parser.add_argument('--server', action='store', default='', required=False, help='Wildfly log filename')
+    # parser.add_argument('--perfmon', action='store', default='', required=False, help='Perfmon4j log filename')
+    # parser.add_argument('--aspen', action='store', default='', required=False, help='Aspen log filename')
+    parser.add_argument('--data', action='store', default='.', required=False, help='Directory containing log files')
     args = parser.parse_args()
     print(args)
     global log_entries, exceptions_sorted, tool_entries, durations, df
-    log_entries = process(args.server)
+
+    # print('server: ', glob(f'{args.data}/server.log*'))
+    # print('aspen: ', glob('Aspen*.log*', root_dir=args.data))
+    # print('perf: ', glob('perfmon4j.log*', root_dir=args.data))
+
+    log_entries = process( glob(f'{args.data}/server.log*'))
     exceptions_sorted = get_exceptions(log_entries)
     tool_entries = get_tools_and_mark_log_entries_with_concurrent_jobs(log_entries)
     durations = get_durations(log_entries)

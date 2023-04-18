@@ -166,11 +166,17 @@ def process_file(open_file: TextIOWrapper) -> List[LogEntry]:
 
     return log_entries
 
-def process( file_name : str) -> List[LogEntry]:
-    if not file_name:
+def process( file_names : List[str]) -> List[LogEntry]:
+    if not file_names:
         return []
-    with open(file_name) as open_file:
-        return process_file(open_file)
+    
+    list = []
+    for file_name in file_names:
+        with open(file_name) as open_file:
+            list.extend(process_file(open_file))
+            print('list len ', len(list))
+    list.sort(key=lambda x: x.timestamp)
+    return list
 
 def show_exceptions(log_entries : List[LogEntry]):
     counter = Counter()
@@ -199,7 +205,7 @@ def main():
     parser.add_argument('--exception', action='store_true', required=False, help='Shows exceptions in the log')
     args = parser.parse_args()
 
-    log_entries = process(args.filename)
+    log_entries = process([args.filename])
     if args.debug:
         for entry in log_entries:
             entry.dump()
