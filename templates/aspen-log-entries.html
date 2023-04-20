@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from '/macros.j2' import level, duration, response_code %}
+
+
+{% block title %}{{log_type}}{% endblock %}
+{% block content %}
+<style>
+    tr {
+        height: 1px;
+    }
+    td {
+        height: inherit;
+        padding: 0px 1px 0px 1px;
+    }
+</style>
+<h2>{{log_type}} - {{log_filter_id}}</h2>
+<h2>Log Entries</h2>
+<br>
+<table cellspacing="5">
+<tr>
+    <th>timestamp</th>
+    <th>level</th>
+    <th>source</th>
+    <th>logtype</th>
+    <th>id</th>
+    <th>message</th>
+</tr>
+
+{% for entry in log_entries %}
+<tr style="vertical-align: top;">
+    <td style="font-size: small;" title="line {{entry.line_number}}" >{{ entry.timestamp }}</td>
+    <td>{{ level(entry.level) }}</td>
+    <td style="font-size: x-small;">{{ entry.source }}</td>
+    <td>{{ level(entry.logtype) }}</td>
+    <td>{{ level(entry.id) }}</td>
+    <td>{{ level(entry.message) }}</td>
+</tr>  
+{% endfor %}
+</table>
+
+{% endblock %}

@@ -189,6 +189,8 @@ def show_exceptions(log_entries : List[LogEntry]):
 # given a list of LogEntry, calculate the 95th percentile response time
 def calculate_p95(log_entries : List[LogEntry]) -> int:
     times_raw = [log_entry.duration for log_entry in log_entries if log_entry.type == LogType.RESPONSE]
+    if len(times_raw) == 0:
+        return 0
     times = np.array(times_raw)
     return int(np.percentile(times, 95))
     # return 99

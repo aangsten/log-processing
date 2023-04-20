@@ -8,6 +8,7 @@ from log_analysis import get_dataframe, get_durations
 from glob import glob
 
 from structuredlog import calculate_p95, process, LogEntry, LogType
+from aspenlog import process_aspenlog, AspenLogEntry
 from exception_entry import ExceptionEntry, get_exceptions
 from tool_entry import ToolEntry, get_tools_and_mark_log_entries_with_concurrent_jobs, ToolEntryType, ToolLocationType
 
@@ -15,6 +16,7 @@ from tool_entry import ToolEntry, get_tools_and_mark_log_entries_with_concurrent
 app = connexion.App(__name__, specification_dir="./")
 
 log_entries : List[LogEntry] = []
+aspen_log_entries : List[AspenLogEntry] = []
 exceptions_sorted : List[ExceptionEntry] = []
 tool_entries : List[ToolEntry] = []
 durations : dict = {}
@@ -25,12 +27,15 @@ def route_index():
     context = {
         "exception_sum": sum([len(exception.log_entries) for exception in exceptions_sorted]),
         "p95": calculate_p95(log_entries),
+        "tools_aborted": sum(1 for aspen_log_entry in aspen_log_entries if 'Abort Tool Job' in aspen_log_entry.message),
         "started_len": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START ),
         "finished_len": sum(1 for tool in tool_entries if tool.type == ToolEntryType.FINISH ),
         "report_local_deliberate": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.LOCAL_DELIBERATE.name ),
         "report_local_unserializable": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.LOCAL_UNSERIALIZABLE.name ),
         "report_remote": sum(1 for tool in tool_entries if tool.type == ToolEntryType.START and tool.location == ToolLocationType.REMOTE.name ),
     }
+
+    print("abort", context["tools_aborted"])
 
     return render_template("index.html", **context)
 
@@ -60,6 +65,12 @@ def route_session_logs(session_id):
 def route_logs():
     global log_entries
     return render_template("log-entries.html", log_entries=log_entries, log_filter_id='', log_type='Logs')
+
+@app.route('/aspenlogs')
+def route_aspen_logs():
+    global aspen_log_entries
+    print(len(aspen_log_entries))
+    return render_template("aspen-log-entries.html", log_entries=aspen_log_entries, log_filter_id='', log_type='Aspen Logs')
 
 @app.route('/tools')
 def route_tools():
@@ -134,13 +145,14 @@ def main():
     parser.add_argument('--data', action='store', default='.', required=False, help='Directory containing log files')
     args = parser.parse_args()
     print(args)
-    global log_entries, exceptions_sorted, tool_entries, durations, df
+    global log_entries, exceptions_sorted, tool_entries, durations, df, aspen_log_entries
 
     # print('server: ', glob(f'{args.data}/server.log*'))
     # print('aspen: ', glob('Aspen*.log*', root_dir=args.data))
     # print('perf: ', glob('perfmon4j.log*', root_dir=args.data))
 
     log_entries = process( glob(f'{args.data}/server.log*'))
+    aspen_log_entries = process_aspenlog( glob(f'{args.data}/Aspen*.log*') )
     exceptions_sorted = get_exceptions(log_entries)
     tool_entries = get_tools_and_mark_log_entries_with_concurrent_jobs(log_entries)
     durations = get_durations(log_entries)
